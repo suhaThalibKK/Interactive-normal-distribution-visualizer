@@ -1,5 +1,4 @@
 Interactive Normal Distribution Visualizer
-SUHA THALIB K K | KMC26CSCE02 | M.Tech S1 | 221TCS002
 
 Open index.html in a desktop or mobile browser. All calculations and file processing run locally. The HTML file contains the complete interface and source code.
 
