@@ -2,8 +2,6 @@
 
 An interactive browser-based tool for exploring normal distributions through adjustable parameters, probability calculations, seeded simulations, CSV data analysis, and downloadable results.
 
-SUHA THALIB K K | KMC26CSCE02 | M.Tech S1 | 221TCS002
-
 Open `index.html` in a desktop or mobile browser. All calculations and file processing run locally in the browser.
 
 ## Features
