@@ -1,48 +1,295 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Interactive Normal Distribution Visualizer</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Interactive Normal Distribution Visualizer</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f3f4ed;color:#203930;font:16px/1.5 'Inter',system-ui,sans-serif}header,main{max-width:1160px;margin:auto;padding:25px}header{display:flex;justify-content:space-between;border-bottom:1px solid #cdd5c9;font-size:13px}h1,h2{font-family:'Baskervville',Georgia,serif;font-weight:500}h1{font-size:clamp(32px,5vw,58px);line-height:1.1;margin:14px 0 22px}h2{margin:0 0 16px;font-size:25px}nav{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}button,select,input{font:inherit}button{border:1px solid #bcc9bc;background:white;color:#213e32;border-radius:6px;padding:8px 14px;cursor:pointer}button[aria-pressed=true],button.primary{background:#214c3c;color:white}section{display:grid;grid-template-columns:minmax(235px,1fr) 2.5fr;gap:16px}aside,article{background:white;border:1px solid #d6ddd2;border-radius:12px;padding:24px}label{display:block;font-size:14px;margin-top:12px;font-weight:600}input,select{width:100%;padding:7px;border:1px solid #aebeb3;border-radius:5px;background:white;color:inherit}input[type=range]{padding:0;accent-color:#357956}canvas{width:100%;height:auto}output{font-size:30px;font-family:Georgia,serif;color:#246d4b}small{display:block;color:#526559}#error{color:#983c24}button:disabled{opacity:.5}footer{margin:25px 0;font-size:13px}details{margin-top:18px}pre{white-space:pre-wrap} [hidden]{display:none!important}@media(max-width:760px){section{grid-template-columns:1fr}header,main{padding:16px}aside,article{padding:18px}}
-</style><header><b>KMCT College of Engineering</b><span>Foundations of Computer Science · 221TCS002</span></header><main><h1>Interactive Normal Distribution Visualizer</h1><nav id="tabs"><button aria-pressed="true">Distribution</button><button>Simulation</button><button>Dataset</button></nav><section><aside><h2>Parameters</h2><div id="model"><label>Mean (μ)<input id="mu" type="number" value="70" step="any"></label><input aria-label="Adjust mean" id="mr" type="range" min="-100" max="150" value="70"><label>Standard deviation (σ)<input id="sd" type="number" value="10" step="any"></label><input aria-label="Adjust standard deviation" id="sr" type="range" min=".5" max="50" step=".5" value="10"></div><div id="upload" hidden><label>CSV with a header row<input type="file" id="file" accept=".csv,text/csv"></label><label>Numeric column<select id="col"></select></label><label><input style="width:auto" type="checkbox" id="omit"> Exclude missing or invalid values</label></div><label>Probability event<select id="mode"><option>Left tail</option><option>Right tail</option><option>Interval</option><option>Within 1σ</option><option>Within 2σ</option><option>Within 3σ</option></select></label><label id="xl">Threshold x<input id="x" type="number" value="80" step="any"></label><div id="bounds" hidden><label>Lower bound<input id="a" type="number" value="60"></label><label>Upper bound<input id="b" type="number" value="80"></label></div><div id="gen" hidden><label>Sample size<input id="n" type="number" value="10000"></label><label>Seed<input id="seed" type="number" value="2026"></label><button class="primary" id="generate">Generate sample</button></div><p><button id="reset">Reset</button></p></aside><article><h2 id="title">Normal density</h2><p id="error" role="alert"></p><canvas id="plot" width="1100" height="490" aria-label="Normal probability density graph"></canvas><div aria-live="polite"><small id="event"></small><output id="result"></output><p id="detail"></p><p id="summary"></p></div><button id="png">Save graph</button> <button id="json">Save summary</button> <button id="csv" hidden>Save sample CSV</button><details><summary>How the probability is calculated</summary><p>Standardize each boundary using z = (x − μ)/σ. The area left of x is Φ(z). An interval uses the difference between the cumulative probabilities at its endpoints. Shading shows the visible part of the event. Histogram height equals count divided by sample size and bin width.</p></details></article></section><footer>SUHA THALIB K K · KMC26CSCE02 · M.Tech S1</footer></main>
+*{box-sizing:border-box}body{margin:0;background:#f3f4ed;color:#203930;font:16px/1.5 system-ui,sans-serif}
+header,main{max-width:1160px;margin:auto;padding:25px}header{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid #cdd5c9;font-size:13px}
+h1,h2{font-family:Georgia,serif;font-weight:500}h1{font-size:clamp(32px,5vw,58px);line-height:1.1;margin:14px 0 22px}h2{margin:0 0 16px;font-size:25px}
+nav{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}button,select,input{font:inherit}button{border:1px solid #bcc9bc;background:white;color:#213e32;border-radius:6px;padding:8px 14px;cursor:pointer}
+button[aria-pressed=true],button.primary{background:#214c3c;color:white}button:disabled{opacity:.5;cursor:not-allowed}
+section{display:grid;grid-template-columns:minmax(250px,1fr) 2.5fr;gap:16px}aside,article{background:white;border:1px solid #d6ddd2;border-radius:12px;padding:24px;min-width:0}
+label{display:block;font-size:14px;margin-top:12px;font-weight:600}input,select{width:100%;padding:7px;border:1px solid #aebeb3;border-radius:5px;background:white;color:inherit}
+input[type=range]{padding:0;accent-color:#357956}input[type=checkbox]{width:auto}canvas{width:100%;height:auto}
+output{display:block;font-size:clamp(23px,3vw,30px);font-family:Georgia,serif;color:#246d4b;overflow-wrap:anywhere}small{display:block;color:#526559}
+.hint{font-size:13px;color:#526559;margin:8px 0 14px}.preset{margin-top:12px}#error{color:#983c24}footer{margin:25px 0;font-size:13px}details{margin-top:18px}
+.z-table-wrap{max-height:520px;overflow:auto;border:1px solid #cbd7cd;border-radius:7px;margin-top:12px}
+.z-table{border-collapse:separate;border-spacing:0;min-width:690px;width:100%;font:13px/1.3 system-ui,sans-serif;text-align:center}
+.z-table th,.z-table td{padding:6px 5px;border-right:1px solid #e0e7e0;border-bottom:1px solid #e0e7e0;white-space:nowrap}
+.z-table thead th{position:sticky;top:0;z-index:2;background:#e8efe9}.z-table tbody th{position:sticky;left:0;z-index:1;background:#e8efe9}
+.z-table thead th:first-child{left:0;z-index:3}.z-table tr.z-row td,.z-table th.z-rowhead{background:#e2f0e8}
+.z-table td.z-col,.z-table th.z-colhead{background:#e7eff8}.z-table td.z-cell{background:#216a48;color:white;font-weight:700;outline:2px solid #14472e;outline-offset:-2px}
+#lookupPath{white-space:pre-line;background:#f2f6f1;border-left:4px solid #357956;padding:12px;margin:12px 0}
+[hidden]{display:none!important}@media(max-width:760px){section{grid-template-columns:1fr}header,main{padding:16px}aside,article{padding:18px}}
+</style>
+</head>
+<body>
+<header><b>KMCT College of Engineering</b><span>Foundations of Computer Science · 221TCS002</span></header>
+<main>
+<h1>Interactive Normal Distribution Visualizer</h1>
+<nav id="tabs" aria-label="Visualizer views">
+  <button type="button" aria-pressed="true">Distribution</button>
+  <button type="button" aria-pressed="false">Simulation</button>
+  <button type="button" aria-pressed="false">Dataset</button>
+  <button type="button" aria-pressed="false">Inverse percentile</button>
+  <button type="button" aria-pressed="false">Solve parameters</button>
+  <button type="button" aria-pressed="false">Interactive Z table</button>
+</nav>
+<section>
+<aside>
+  <h2 id="controlsTitle">Parameters</h2>
+  <div id="model">
+    <label>Mean (μ)<input id="mu" type="number" value="70" step="any"></label>
+    <input aria-label="Adjust mean" id="mr" type="range" min="-100" max="150" value="70">
+    <label>Standard deviation (σ)<input id="sd" type="number" value="10" step="any"></label>
+    <input aria-label="Adjust standard deviation" id="sr" type="range" min=".5" max="50" step=".5" value="10">
+  </div>
+  <div id="upload" hidden>
+    <label>CSV with a header row<input type="file" id="file" accept=".csv,text/csv"></label>
+    <label>Numeric column<select id="col"></select></label>
+    <label><input type="checkbox" id="omit"> Exclude missing or invalid values</label>
+  </div>
+  <div id="forwardControls">
+    <label>Probability event<select id="mode"><option>Left tail</option><option>Right tail</option><option>Interval</option><option>Within 1σ</option><option>Within 2σ</option><option>Within 3σ</option></select></label>
+    <label id="xl">Threshold x<input id="x" type="number" value="80" step="any"></label>
+    <div id="bounds" hidden><label>Lower bound<input id="a" type="number" value="60" step="any"></label><label>Upper bound<input id="b" type="number" value="80" step="any"></label></div>
+  </div>
+  <div id="inverseControls" hidden>
+    <label>Probability refers to<select id="inverseSide"><option value="left">Area to the left: P(X ≤ x)</option><option value="right">Area to the right: P(X ≥ x)</option></select></label>
+    <label>Target probability (0 to 1)<input id="inverseP" type="number" value="0.1" min="0" max="1" step="any"></label>
+    <p class="hint">Find the threshold x leaving this probability in the selected tail.</p>
+    <button type="button" class="preset" id="lowerPreset">2026 exam: lower 10%</button>
+    <button type="button" class="preset" id="upperPreset">2026 exam: upper 5%</button>
+  </div>
+  <div id="solverControls" hidden>
+    <p class="hint">Enter two thresholds and their cumulative probabilities. The second threshold and probability must both be greater than the first.</p>
+    <label>First threshold x₁<input id="solveX1" type="number" value="60000" step="any"></label>
+    <label>Left-tail probability F(x₁)<input id="solveP1" type="number" value="0.69" min="0" max="1" step="any"></label>
+    <label>Second threshold x₂<input id="solveX2" type="number" value="80000" step="any"></label>
+    <label>Left-tail probability F(x₂)<input id="solveP2" type="number" value="0.83" min="0" max="1" step="any"></label>
+    <button type="button" class="preset" id="salaryPreset">2025 exam: salary categories</button>
+    <p class="hint">For that question, F(80,000) = 0.69 + 0.14 = 0.83.</p>
+  </div>
+  <div id="zControls" hidden>
+    <label>Find<select id="zDirection"><option value="z-to-p">Probability from a Z value</option><option value="p-to-z">Z value from a probability</option></select></label>
+    <div id="zToPControls">
+      <label>Given Z value<input id="zInput" type="number" value="1.23" step="any"></label>
+      <label>Question asks for<select id="zQuestion">
+        <option value="left">P(Z ≤ z): left tail</option><option value="right">P(Z ≥ z): right tail</option>
+        <option value="between">P(between 0 and z)</option><option value="central">P(−|z| ≤ Z ≤ |z|): central area</option>
+      </select></label>
+    </div>
+    <div id="pToZControls" hidden>
+      <label>Given probability<input id="zProbability" type="number" value="0.69" min="0" max="1" step="any"></label>
+      <label>Question gives<select id="pQuestion">
+        <option value="left">P(Z ≤ z): left tail</option><option value="right">P(Z ≥ z): right tail</option>
+        <option value="meanPositive">P(0 ≤ Z ≤ z), z ≥ 0</option><option value="meanNegative">P(z ≤ Z ≤ 0), z ≤ 0</option>
+        <option value="central">P(−z ≤ Z ≤ z), z ≥ 0</option>
+      </select></label>
+    </div>
+    <p class="hint">This table gives the area between the mean (0) and a positive Z value. Negative values use symmetry.</p>
+    <button type="button" class="preset" id="zExample">Example: Z = 1.23</button>
+    <button type="button" class="preset" id="zSalaryExample">2025 exam: P(Z ≤ z) = 0.69</button>
+    <button type="button" class="preset" id="zUpperExample">2026 exam: upper tail = 0.05</button>
+  </div>
+  <div id="gen" hidden><label>Sample size<input id="n" type="number" value="10000"></label><label>Seed<input id="seed" type="number" value="2026"></label><button type="button" class="primary" id="generate">Generate sample</button></div>
+  <p><button type="button" id="reset">Reset</button></p>
+</aside>
+<article>
+  <h2 id="title">Normal density</h2><p id="error" role="alert"></p>
+  <canvas id="plot" width="1100" height="490" aria-label="Normal distribution graph"></canvas>
+  <div aria-live="polite"><small id="event"></small><output id="result"></output><p id="detail"></p><p id="summary"></p></div>
+  <button type="button" id="png">Save graph</button> <button type="button" id="json">Save summary</button> <button type="button" id="csv" hidden>Save sample CSV</button>
+  <details><summary>How this result is calculated</summary><p id="formulaText"></p></details>
+  <div id="zPanel" hidden>
+    <h2>Standard normal lookup table</h2>
+    <p class="hint">Generated to four decimal places using A(z) = P(0 ≤ Z ≤ z) = Φ(z) − 0.5 for positive z. The supplied scanned table uses this same convention and sometimes prints extra digits.</p>
+    <p id="lookupPath" aria-live="polite"></p>
+    <p class="hint">Green highlights the row, blue highlights the column, and dark green marks their intersection.</p>
+    <div class="z-table-wrap" id="zTableWrap"><table class="z-table" id="zTable"><caption>Area from 0 to positive Z</caption></table></div>
+  </div>
+</article>
+</section>
+<footer>SUHA THALIB K K · KMC26CSCE02 · M.Tech S1</footer>
+</main>
 <script>
-const $=id=>document.getElementById(id), num=id=>$(id).valueAsNumber;
+const $=id=>document.getElementById(id),num=id=>$(id).valueAsNumber;
 let tab=0,sample=null,rows=[],meta=null,fileToken=0;
 function normalTail(z){ // Incomplete gamma series / continued fraction for erfc.
- const x=z*z/2;if(x===0)return .5;if(x>745)return 0;
- const factor=Math.exp(-x+.5*Math.log(x)-.5*Math.log(Math.PI));
- if(x<1.5){let term=2,sum=2;for(let i=1;i<200;i++){term*=x/(i+.5);sum+=term;if(term<sum*1e-16)break}return (1-factor*sum)/2}
- let b=x+.5,c=1e300,d=1/b,h=d;for(let i=1;i<200;i++){let a=-i*(i-.5);b+=2;d=1/(a*d+b);c=b+a/c;let change=c*d;h*=change;if(Math.abs(change-1)<2e-15)break}return factor*h/2
+  const x=z*z/2;if(x===0)return .5;if(x>745)return 0;
+  const factor=Math.exp(-x+.5*Math.log(x)-.5*Math.log(Math.PI));
+  if(x<1.5){let term=2,sum=2;for(let i=1;i<200;i++){term*=x/(i+.5);sum+=term;if(term<sum*1e-16)break}return(1-factor*sum)/2}
+  let b=x+.5,c=1e300,d=1/b,h=d;
+  for(let i=1;i<200;i++){const a=-i*(i-.5);b+=2;d=1/(a*d+b);c=b+a/c;const change=c*d;h*=change;if(Math.abs(change-1)<2e-15)break}
+  return factor*h/2;
 }
 const cdf=z=>z<0?normalTail(z):1-normalTail(z),sf=z=>cdf(-z);
-function makeSample(n,seed,m,s){let state=seed,out=[];function uniform(){state=(Math.imul(1664525,state)+1013904223)>>>0;return(state+.5)/4294967296}while(out.length<n){let r=Math.sqrt(-2*Math.log(uniform())),t=2*Math.PI*uniform();out.push(m+s*r*Math.cos(t));if(out.length<n)out.push(m+s*r*Math.sin(t))}return out}
-function stats(v){let m=0,M=0;v.forEach((x,i)=>{let d=x-m;m+=d/(i+1);M+=d*(x-m)});return [m,Math.sqrt(M/(v.length-1))]}
-function parseCSV(text){let arr=[],row=[],v='',q=false;for(let i=0;i<text.length;i++){let ch=text[i];if(ch==='"'){if(q&&text[i+1]==='"'){v+='"';i++}else q=!q}else if(!q&&ch===','){row.push(v);v=''}else if(!q&&/[\n\r]/.test(ch)){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(v);arr.push(row);row=[];v=''}else v+=ch}if(q)throw Error('Unclosed quoted CSV field.');if(v||row.length)arr.push([...row,v]);return arr}
-const fmt=x=>Number(x.toPrecision(7)).toString();
-function graph(m,s,lo,hi,data,p,label){const cv=$('plot'),g=cv.getContext('2d'),L=82,R=1060,T=65,B=375;g.fillStyle='white';g.fillRect(0,0,1100,490);
- let min=m-4*s,max=m+4*s;for(let t of [lo,hi])if(Number.isFinite(t)){min=Math.min(min,t);max=Math.max(max,t)}
- let width=(max-min)/40,bins=Array(40).fill(0);if(data)for(let t of data)if(t>=min&&t<=max)bins[Math.min(39,Math.floor((t-min)/width))]++;
- let peak=1/(s*Math.sqrt(2*Math.PI)),top=Math.max(peak,...bins.map(k=>k/((data?.length||1)*width)))*1.08;
- let X=t=>L+(t-min)/(max-min)*(R-L),Y=y=>B-y/top*(B-T),pdf=t=>peak*Math.exp(-.5*((t-m)/s)**2);
- g.font='18px Arial';g.fillStyle='#234b37';g.fillText('Density   ·   μ = '+fmt(m)+'   σ = '+fmt(s),L,30);
- for(let j=0;j<=4;j++){let y=top*j/4;g.fillStyle='#42564d';g.fillText(Number(y.toPrecision(2)),3,Y(y));g.strokeStyle='#dfe6df';g.beginPath();g.moveTo(L,Y(y));g.lineTo(R,Y(y));g.stroke()}
- if(data)bins.forEach((k,i)=>{g.fillStyle='#c5ccd5';let y=Y(k/(data.length*width));g.fillRect(X(min+i*width),y,(R-L)/40-1,B-y)});
- function curve(a,b){for(let i=0;i<=800;i++){let t=a+(b-a)*i/800;g.lineTo(X(t),Y(pdf(t)))}}
- let a=Math.max(min,lo),b=Math.min(max,hi);g.beginPath();g.moveTo(X(a),B);curve(a,b);g.lineTo(X(b),B);g.closePath();g.fillStyle='rgba(77,164,116,.4)';g.fill();g.beginPath();g.moveTo(L,Y(pdf(min)));curve(min,max);g.strokeStyle='#196141';g.lineWidth=3;g.stroke();g.lineWidth=1;
- for(let i=0;i<=8;i++){let t=min+(max-min)*i/8;g.textAlign='center';g.fillStyle='#354a40';g.fillText(Number(t.toPrecision(4)),X(t),B+25)}g.textAlign='left';g.fillText(label+'   ·   '+fmt(p*100)+'%',L,451)
+// Acklam inverse-normal approximation, followed by two CDF corrections.
+function inverseCDF(p){
+  if(!(p>0&&p<1))throw Error('Enter a probability strictly between 0 and 1.');
+  if(p===.5)return 0;if(p>.5)return-inverseCDF(1-p);
+  const a=[-39.69683028665376,220.9460984245205,-275.9285104469687,138.357751867269,-30.66479806614716,2.506628277459239];
+  const b=[-54.47609879822406,161.5858368580409,-155.6989798598866,66.80131188771972,-13.28068155288572];
+  const c=[-.007784894002430293,-.3223964580411365,-2.400758277161838,-2.549732539343734,4.374664141464968,2.938163982698783];
+  const d=[.007784695709041462,.3224671290700398,2.445134137142996,3.754408661907416];
+  let z;
+  if(p<.02425){const q=Math.sqrt(-2*Math.log(p));z=(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1)}
+  else{const q=p-.5,r=q*q;z=(((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1)}
+  for(let i=0;i<2;i++){const density=Math.exp(-z*z/2)/Math.sqrt(2*Math.PI);if(!density)break;const correction=(cdf(z)-p)/density;if(!Number.isFinite(correction))break;z-=correction}
+  return z;
 }
-function clearError(msg){meta=null;$('error').textContent=msg;$('plot').getContext('2d').clearRect(0,0,1100,490);for(let id of ['event','result','detail','summary'])$(id).textContent='';for(let id of ['png','json','csv'])$(id).disabled=true}
-function update(){let k=$('mode').selectedIndex;$('xl').hidden=k>1;$('bounds').hidden=k!==2;try{let m=num('mu'),s=num('sd'),data=tab===1?sample:null,rejected=0;
- if(tab===2){if(!rows.length)throw Error('Choose a CSV file to fit a normal curve.');data=[];for(let row of rows.slice(1)){let v=row[$('col').selectedIndex]?.trim();if(v&&Number.isFinite(Number(v)))data.push(Number(v));else rejected++}if(rejected&&!$('omit').checked)throw Error(rejected+' invalid or missing values. Select the exclusion option to continue.');if(data.length<2)throw Error('At least two numeric observations are required.');[m,s]=stats(data)}
- if(!Number.isFinite(m)||!Number.isFinite(s)||s<1e-6||s>1e6||m+4*s===m)throw Error('Enter a finite mean and a standard deviation between 0.000001 and 1000000. Constant data cannot define a normal curve.');
- let lo=k===0?-Infinity:k===1?num('x'):k===2?num('a'):m-(k-2)*s,hi=k===0?num('x'):k===1?Infinity:k===2?num('b'):m+(k-2)*s;
- if(Number.isNaN(lo)||Number.isNaN(hi)||lo>hi)throw Error('Enter valid bounds with lower bound ≤ upper bound.');
- let za=(lo-m)/s,zb=(hi-m)/s,p=za>=0?sf(za)-sf(zb):cdf(zb)-cdf(za),label=lo===-Infinity?'X ≤ '+fmt(hi):hi===Infinity?'X ≥ '+fmt(lo):fmt(lo)+' ≤ X ≤ '+fmt(hi);
- let bounds=[za,zb].filter(Number.isFinite).map(fmt).join(', ');$('error').textContent='';$('event').textContent='Model probability · '+label;$('result').textContent=p&&p<1e-7?p.toExponential(6):p.toFixed(8);$('detail').textContent=fmt(100*p)+'% of model probability lies in this region. Standardized bounds: '+bounds+'.';
- let summary=null;if(data){let [mean,sd]=stats(data),count=data.filter(v=>v>=lo&&v<=hi).length;summary={n:data.length,mean,sampleSD:sd,eventCount:count,rejected};$('summary').textContent='Histogram: '+data.length+' observations · mean '+fmt(mean)+' · sample SD '+fmt(sd)+' · '+count+' in event ('+fmt(100*count/data.length)+'%)'+(tab===2?' · '+rejected+' excluded':'')}else $('summary').textContent=tab===1?'Generate a sample to compare observed frequencies with the model.':'';
- graph(m,s,lo,hi,data,p,label);meta={model:tab===2?'fitted':'specified',mean:m,standardDeviation:s,event:label,probability:p,summary,simulation:tab===1&&data?{seed:num('seed'),generator:'LCG32 + Box–Muller'}:null,dataset:tab===2?{file:$('file').files[0]?.name,column:$('col').selectedOptions[0]?.text}:null};$('png').disabled=$('json').disabled=false;$('csv').disabled=!data
- }catch(e){clearError(e.message)}}
-function show(i){tab=i;[...$('tabs').children].forEach((b,j)=>b.setAttribute('aria-pressed',i===j));$('model').hidden=i===2;$('upload').hidden=i!==2;$('gen').hidden=$('csv').hidden=i!==1;$('title').textContent=['Normal density','Synthetic sample','Fitted distribution'][i];update()}
-[...$('tabs').children].forEach((b,i)=>b.onclick=()=>show(i));document.querySelectorAll('input:not([type=file]),select').forEach(el=>el.oninput=()=>{if(['mr','sr','mu','sd','n','seed'].includes(el.id))sample=null;for(let [range,box] of [['mr','mu'],['sr','sd']]){if(el.id===range)$(box).value=el.value;if(el.id===box&&Number.isFinite(num(box))){$(range).min=Math.min(+$(range).min,num(box));$(range).max=Math.max(+$(range).max,num(box));$(range).value=el.value}}update()});
+function solveNormal(x1,p1,x2,p2){
+  if(![x1,p1,x2,p2].every(Number.isFinite))throw Error('Enter finite thresholds and probabilities.');
+  if(!(p1>0&&p1<1&&p2>0&&p2<1))throw Error('Each probability must be strictly between 0 and 1.');
+  if(!(x2>x1&&p2>p1))throw Error('The second threshold and its cumulative probability must both be greater than the first.');
+  const z1=inverseCDF(p1),z2=inverseCDF(p2),standardDeviation=(x2-x1)/(z2-z1),mean=x1-standardDeviation*z1;
+  if(!Number.isFinite(mean)||!Number.isFinite(standardDeviation)||standardDeviation<1e-6||standardDeviation>1e6||mean+4*standardDeviation===mean)
+    throw Error('These points do not produce a usable normal curve (standard deviation must be 0.000001 to 1000000).');
+  return{mean,standardDeviation,z1,z2};
+}
+function makeSample(n,seed,m,s){let state=seed,out=[];function uniform(){state=(Math.imul(1664525,state)+1013904223)>>>0;return(state+.5)/4294967296}while(out.length<n){let r=Math.sqrt(-2*Math.log(uniform())),t=2*Math.PI*uniform();out.push(m+s*r*Math.cos(t));if(out.length<n)out.push(m+s*r*Math.sin(t))}return out}
+function stats(v){let m=0,M=0;v.forEach((x,i)=>{let d=x-m;m+=d/(i+1);M+=d*(x-m)});return[m,Math.sqrt(M/(v.length-1))]}
+function parseCSV(text){let arr=[],row=[],v='',q=false;for(let i=0;i<text.length;i++){let ch=text[i];if(ch==='"'){if(q&&text[i+1]==='"'){v+='"';i++}else q=!q}else if(!q&&ch===','){row.push(v);v=''}else if(!q&&/[\n\r]/.test(ch)){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(v);arr.push(row);row=[];v=''}else v+=ch}if(q)throw Error('Unclosed quoted CSV field.');if(v||row.length)arr.push([...row,v]);return arr}
+const fmt=x=>Number(x.toPrecision(7)).toString(),fixed=(x,n=6)=>Number(x.toFixed(n)).toString();
+function graph(m,s,lo,hi,data,p,label){const g=$('plot').getContext('2d'),L=82,R=1060,T=65,B=375;g.fillStyle='white';g.fillRect(0,0,1100,490);
+  let min=m-4*s,max=m+4*s;for(let t of[lo,hi])if(Number.isFinite(t)){min=Math.min(min,t);max=Math.max(max,t)}
+  let width=(max-min)/40,bins=Array(40).fill(0);if(data)for(let t of data)if(t>=min&&t<=max)bins[Math.min(39,Math.floor((t-min)/width))]++;
+  let peak=1/(s*Math.sqrt(2*Math.PI)),top=Math.max(peak,...bins.map(k=>k/((data?.length||1)*width)))*1.08;
+  let X=t=>L+(t-min)/(max-min)*(R-L),Y=y=>B-y/top*(B-T),pdf=t=>peak*Math.exp(-.5*((t-m)/s)**2);
+  g.font='18px Arial';g.fillStyle='#234b37';g.fillText('Density   ·   μ = '+fmt(m)+'   σ = '+fmt(s),L,30);
+  for(let j=0;j<=4;j++){let y=top*j/4;g.fillStyle='#42564d';g.fillText(Number(y.toPrecision(2)),3,Y(y));g.strokeStyle='#dfe6df';g.beginPath();g.moveTo(L,Y(y));g.lineTo(R,Y(y));g.stroke()}
+  if(data)bins.forEach((k,i)=>{g.fillStyle='#c5ccd5';let y=Y(k/(data.length*width));g.fillRect(X(min+i*width),y,(R-L)/40-1,B-y)});
+  function curve(a,b){for(let i=0;i<=800;i++){let t=a+(b-a)*i/800;g.lineTo(X(t),Y(pdf(t)))}}
+  let a=Math.max(min,lo),b=Math.min(max,hi);g.beginPath();g.moveTo(X(a),B);curve(a,b);g.lineTo(X(b),B);g.closePath();g.fillStyle='rgba(77,164,116,.4)';g.fill();
+  g.beginPath();g.moveTo(L,Y(pdf(min)));curve(min,max);g.strokeStyle='#196141';g.lineWidth=3;g.stroke();g.lineWidth=1;
+  for(let i=0;i<=8;i++){let t=min+(max-min)*i/8;g.textAlign='center';g.fillStyle='#354a40';g.fillText(Number(t.toPrecision(4)),X(t),B+25)}
+  g.textAlign='left';g.fillText(label+'   ·   '+fmt(p*100)+'%',L,451)
+}
+function clearError(msg){meta=null;$('error').textContent=msg;$('plot').getContext('2d').clearRect(0,0,1100,490);for(let id of['event','result','detail','summary'])$(id).textContent='';for(let id of['png','json','csv'])$(id).disabled=true;if(tab===5){highlightZTable(null);$('lookupPath').textContent='Correct the input to see the lookup steps.'}}
+function display(m,s,lo,hi,data,p,label,event,result,detail,summary,metadata){$('error').textContent='';$('event').textContent=event;$('result').textContent=result;$('detail').textContent=detail;$('summary').textContent=summary;graph(m,s,lo,hi,data,p,label);meta=metadata;$('png').disabled=$('json').disabled=false;$('csv').disabled=!data||tab!==1}
+function validModel(m,s){if(!Number.isFinite(m)||!Number.isFinite(s)||s<1e-6||s>1e6||m+4*s===m)throw Error('Enter a finite mean and a standard deviation between 0.000001 and 1000000. Constant data cannot define a normal curve.')}
+// The supplied printed table contains A(z) = P(0 <= Z <= z), for z >= 0.
+const tableArea=z=>cdf(Math.abs(z))-.5;
+function tableCell(row,col){const z=(row*10+col)/100;return{row,col,z,area:Number(tableArea(z).toFixed(4))}}
+function tableCellForZ(z){const hundredths=Math.round(Math.abs(z)*100);return Number.isFinite(z)&&hundredths<=399?tableCell(Math.floor(hundredths/10),hundredths%10):null}
+function tableCellForArea(area){let best=null,difference=Infinity;for(let row=0;row<40;row++)for(let col=0;col<10;col++){const cell=tableCell(row,col),gap=Math.abs(cell.area-area);if(gap<difference-1e-12){best=cell;difference=gap}}return best}
+function buildZTable(){let html='<caption>Area from 0 to positive Z</caption><thead><tr><th scope="col">z</th>';
+  for(let col=0;col<10;col++)html+='<th scope="col" data-colhead="'+col+'">'+(col/100).toFixed(2)+'</th>';
+  html+='</tr></thead><tbody>';
+  for(let row=0;row<40;row++){html+='<tr data-row="'+row+'"><th scope="row">'+(row/10).toFixed(1)+'</th>';
+    for(let col=0;col<10;col++)html+='<td data-col="'+col+'">'+tableCell(row,col).area.toFixed(4)+'</td>';
+    html+='</tr>'}
+  $('zTable').innerHTML=html+'</tbody>';
+}
+function highlightZTable(selected){
+  const table=$('zTable');
+  for(const element of table.querySelectorAll('.z-row,.z-rowhead,.z-col,.z-colhead,.z-cell'))element.classList.remove('z-row','z-rowhead','z-col','z-colhead','z-cell');
+  for(const element of table.querySelectorAll('[aria-current]'))element.removeAttribute('aria-current');
+  if(!selected)return;
+  const row=table.querySelector('tbody tr[data-row="'+selected.row+'"]');
+  const head=table.querySelector('thead th[data-colhead="'+selected.col+'"]');
+  const cell=row.querySelector('td[data-col="'+selected.col+'"]');
+  row.classList.add('z-row');row.querySelector('th').classList.add('z-rowhead');
+  head.classList.add('z-colhead');
+  for(const other of table.querySelectorAll('tbody td[data-col="'+selected.col+'"]'))other.classList.add('z-col');
+  cell.classList.add('z-cell');cell.setAttribute('aria-current','true');
+  const wrap=$('zTableWrap');
+  if(cell.getBoundingClientRect){const box=cell.getBoundingClientRect(),viewport=wrap.getBoundingClientRect();
+    wrap.scrollTop+=box.top-viewport.top-wrap.clientHeight/2;
+    wrap.scrollLeft+=box.left-viewport.left-wrap.clientWidth/2}
+}
+function zTableQuery(){
+  const direction=$('zDirection').value,fromZ=direction==='z-to-p';
+  $('zToPControls').hidden=!fromZ;$('pToZControls').hidden=fromZ;
+  let z,probability,lo,hi,question,requestedArea,selected,conversion;
+  if(fromZ){
+    z=num('zInput');if(!Number.isFinite(z))throw Error('Enter a finite Z value.');
+    question=$('zQuestion').value;requestedArea=tableArea(z);selected=tableCellForZ(z);
+    if(question==='left'){probability=cdf(z);lo=-Infinity;hi=z;conversion=z>=0?'P = 0.5 + A':'P = 0.5 − A'}
+    else if(question==='right'){probability=sf(z);lo=z;hi=Infinity;conversion=z>=0?'P = 0.5 − A':'P = 0.5 + A'}
+    else if(question==='between'){probability=requestedArea;lo=Math.min(0,z);hi=Math.max(0,z);conversion='P = A'}
+    else{probability=2*requestedArea;lo=-Math.abs(z);hi=Math.abs(z);conversion='P = 2A'}
+  }else{
+    const p=num('zProbability');question=$('pQuestion').value;
+    if(!Number.isFinite(p))throw Error('Enter a finite probability.');
+    if(question==='meanPositive'||question==='meanNegative'){
+      if(!(p>=0&&p<.5))throw Error('An area between the mean and Z must be at least 0 and less than 0.5.');
+      z=question==='meanPositive'?inverseCDF(.5+p):inverseCDF(.5-p);
+      probability=p;requestedArea=p;lo=Math.min(0,z);hi=Math.max(0,z);
+      conversion='A = p';
+    }else{
+      if(!(p>0&&p<1))throw Error('Enter a probability strictly between 0 and 1.');
+      if(question==='left'){z=inverseCDF(p);lo=-Infinity;hi=z;requestedArea=Math.abs(p-.5);conversion=p>=.5?'A = p − 0.5':'A = 0.5 − p'}
+      else if(question==='right'){z=-inverseCDF(p);lo=z;hi=Infinity;requestedArea=Math.abs(.5-p);conversion=p<=.5?'A = 0.5 − p':'A = p − 0.5'}
+      else{z=inverseCDF((1+p)/2);lo=-z;hi=z;requestedArea=p/2;conversion='A = p / 2'}
+      probability=p;
+    }
+    selected=tableCellForZ(z)?tableCellForArea(requestedArea):null;
+  }
+  const label=lo===-Infinity?'Z ≤ '+fmt(hi):hi===Infinity?'Z ≥ '+fmt(lo):fmt(lo)+' ≤ Z ≤ '+fmt(hi);
+  const cellText=selected?'row '+(selected.row/10).toFixed(1)+' + column '+(selected.col/100).toFixed(2)+' → cell '+selected.area.toFixed(4)+' (table Z ≈ '+selected.z.toFixed(2)+')':'outside the printed table range 0.00–3.99';
+  let tableEstimate=null;
+  if(selected&&fromZ){
+    if(question==='left')tableEstimate=z>=0?.5+selected.area:.5-selected.area;
+    else if(question==='right')tableEstimate=z>=0?.5-selected.area:.5+selected.area;
+    else if(question==='between')tableEstimate=selected.area;
+    else tableEstimate=2*selected.area;
+  }
+  const finalStep=fromZ?conversion+'; table estimate P ≈ '+(selected?tableEstimate.toFixed(4):'unavailable')+'; calculated P = '+probability.toFixed(8)+'.':
+    'Table estimate Z ≈ '+(selected?(z<0?'−':'')+selected.z.toFixed(2):'unavailable')+'; calculated Z = '+fixed(z)+' (shown to six decimals).';
+  const steps=(fromZ?
+    '1. Start with Z = '+fmt(z)+'. For a negative value, use symmetry around zero.\n2. Look up |Z| = '+fmt(Math.abs(z))+'; the table stores A = P(0 ≤ Z ≤ |z|).\n':
+    '1. Convert the given probability '+fmt(probability)+': '+conversion+' = '+fmt(requestedArea)+'.\n2. Find the closest printed area in the table.\n')+
+    '3. '+cellText+'.\n4. '+finalStep;
+  highlightZTable(selected);$('lookupPath').textContent=steps;
+  display(0,1,lo,hi,null,probability,label,
+    fromZ?'Probability from Z = '+fmt(z):'Z from the given probability',
+    fromZ?probability.toFixed(8):'z = '+fixed(z),
+    'The highlighted cell shows area from 0 to |Z|, not the full left-tail probability.',
+    'Table lookup: '+cellText+'.',
+    {calculation:'interactive-z-table',direction,question,standardizedValue:z,probability,
+      tableConvention:'area between zero and positive z',requestedTableArea:requestedArea,
+      tableCell:selected?{row:(selected.row/10).toFixed(1),column:(selected.col/100).toFixed(2),z:selected.z,area:selected.area}:null});
+}
+function update(){let k=$('mode').selectedIndex;$('xl').hidden=k>1;$('bounds').hidden=k!==2;try{
+  if(tab===5){zTableQuery();return}
+  if(tab===4){const x1=num('solveX1'),p1=num('solveP1'),x2=num('solveX2'),p2=num('solveP2');const{mean,standardDeviation,z1,z2}=solveNormal(x1,p1,x2,p2),interval=p2-p1,label=fmt(x1)+' ≤ X ≤ '+fmt(x2);
+    display(mean,standardDeviation,x1,x2,null,interval,label,'Normal model solved from F(x₁) and F(x₂)',
+      'μ = '+fixed(mean,2)+'   ·   σ = '+fixed(standardDeviation,2),
+      'z₁ = '+fixed(z1)+'; z₂ = '+fixed(z2)+'. The interval between the thresholds has probability '+fmt(interval*100)+'%.',
+      'Check: F('+fmt(x1)+') = '+fmt(cdf((x1-mean)/standardDeviation))+'; F('+fmt(x2)+') = '+fmt(cdf((x2-mean)/standardDeviation))+'.',
+      {calculation:'solve-parameters',model:'solved',mean,standardDeviation,inputs:{x1,p1,x2,p2},standardized:{z1,z2},intervalProbability:interval});return}
+  let m=num('mu'),s=num('sd'),data=tab===1?sample:null,rejected=0;
+  if(tab===2){if(!rows.length)throw Error('Choose a CSV file to fit a normal curve.');data=[];for(let row of rows.slice(1)){let v=row[$('col').selectedIndex]?.trim();if(v&&Number.isFinite(Number(v)))data.push(Number(v));else rejected++}if(rejected&&!$('omit').checked)throw Error(rejected+' invalid or missing values. Select the exclusion option to continue.');if(data.length<2)throw Error('At least two numeric observations are required.');[m,s]=stats(data)}
+  validModel(m,s);
+  if(tab===3){let target=num('inverseP');if(!Number.isFinite(target)||!(target>0&&target<1))throw Error('Enter a target probability strictly between 0 and 1.');let side=$('inverseSide').value,z=side==='left'?inverseCDF(target):-inverseCDF(target),threshold=m+s*z;if(!Number.isFinite(threshold))throw Error('The selected probability produces a threshold outside the usable number range.');let lo=side==='left'?-Infinity:threshold,hi=side==='left'?threshold:Infinity,label=side==='left'?'X ≤ '+fmt(threshold):'X ≥ '+fmt(threshold);
+    display(m,s,lo,hi,null,target,label,(side==='left'?'Left-tail':'Right-tail')+' cutoff for probability '+fmt(target),
+      'x = '+fixed(threshold),'Standard-normal cutoff z = '+fixed(z)+'. '+(side==='left'?'P(X ≤ x)':'P(X ≥ x)')+' = '+fmt(target)+'.',
+      'The shaded area is the requested '+(side==='left'?'left':'right')+' tail.',
+      {calculation:'inverse-percentile',model:'specified',mean:m,standardDeviation:s,side,targetProbability:target,standardizedCutoff:z,threshold});return}
+  let lo=k===0?-Infinity:k===1?num('x'):k===2?num('a'):m-(k-2)*s,hi=k===0?num('x'):k===1?Infinity:k===2?num('b'):m+(k-2)*s;
+  if(Number.isNaN(lo)||Number.isNaN(hi)||lo>hi)throw Error('Enter valid bounds with lower bound ≤ upper bound.');
+  let za=(lo-m)/s,zb=(hi-m)/s,p=za>=0?sf(za)-sf(zb):cdf(zb)-cdf(za),label=lo===-Infinity?'X ≤ '+fmt(hi):hi===Infinity?'X ≥ '+fmt(lo):fmt(lo)+' ≤ X ≤ '+fmt(hi),bounds=[za,zb].filter(Number.isFinite).map(fmt).join(', ');
+  let summary=null,summaryText='';if(data){let[mean,sd]=stats(data),count=data.filter(v=>v>=lo&&v<=hi).length;summary={n:data.length,mean,sampleSD:sd,eventCount:count,rejected};summaryText='Histogram: '+data.length+' observations · mean '+fmt(mean)+' · sample SD '+fmt(sd)+' · '+count+' in event ('+fmt(100*count/data.length)+'%)'+(tab===2?' · '+rejected+' excluded':'')}else if(tab===1)summaryText='Generate a sample to compare observed frequencies with the model.';
+  display(m,s,lo,hi,data,p,label,'Model probability · '+label,p&&p<1e-7?p.toExponential(6):p.toFixed(8),fmt(100*p)+'% of model probability lies in this region. Standardized bounds: '+bounds+'.',summaryText,
+    {calculation:'forward-probability',model:tab===2?'fitted':'specified',mean:m,standardDeviation:s,event:label,probability:p,summary,simulation:tab===1&&data?{seed:num('seed'),generator:'LCG32 + Box–Muller'}:null,dataset:tab===2?{file:$('file').files[0]?.name,column:$('col').selectedOptions[0]?.text}:null});
+}catch(e){clearError(e.message)}}
+function show(i){tab=i;[...$('tabs').children].forEach((b,j)=>b.setAttribute('aria-pressed',i===j));$('model').hidden=i===2||i===4||i===5;$('upload').hidden=i!==2;$('forwardControls').hidden=i>2;$('inverseControls').hidden=i!==3;$('solverControls').hidden=i!==4;$('zControls').hidden=$('zPanel').hidden=i!==5;$('gen').hidden=$('csv').hidden=i!==1;$('controlsTitle').textContent=i===4?'Known percentile points':i===5?'Z table lookup':'Parameters';$('title').textContent=['Normal density','Synthetic sample','Fitted distribution','Inverse percentile','Solved normal distribution','Standard normal curve'][i];
+  $('formulaText').textContent=i===3?'For a left-tail probability p, z = Φ⁻¹(p) and x = μ + σz. For a right-tail probability p, use z = −Φ⁻¹(p). The graph shades the selected tail.':i===4?'Convert each cumulative probability pᵢ to zᵢ = Φ⁻¹(pᵢ). Then σ = (x₂ − x₁)/(z₂ − z₁) and μ = x₁ − σz₁. The graph shades the interval between the known thresholds.':i===5?'The table stores A(z) = Φ(|z|) − 0.5. Convert a left tail, right tail, central area, or mean-to-z area to A before looking up the row and hundredth column. The graph shades the event asked in the question. Exact calculations retain full precision; a table cell is rounded to four decimal places.':'Standardize each boundary using z = (x − μ)/σ. The area left of x is Φ(z). An interval uses the difference between cumulative probabilities at its endpoints. Shading shows the visible part of the event. Histogram height equals count divided by sample size and bin width.';update()}
+[...$('tabs').children].forEach((b,i)=>b.onclick=()=>show(i));
+document.querySelectorAll('input:not([type=file]),select').forEach(el=>el.oninput=()=>{if(['mr','sr','mu','sd','n','seed'].includes(el.id))sample=null;for(let[range,box]of[['mr','mu'],['sr','sd']]){if(el.id===range)$(box).value=el.value;if(el.id===box&&Number.isFinite(num(box))){$(range).min=Math.min(+$(range).min,num(box));$(range).max=Math.max(+$(range).max,num(box));$(range).value=el.value}}update()});
 $('generate').onclick=()=>{update();if(!meta)return;let n=num('n'),seed=num('seed');if(!Number.isInteger(n)||n<2||n>100000||!Number.isInteger(seed)||seed<0||seed>4294967295)return clearError('Use a sample size from 2 to 100000 and an integer seed from 0 to 4294967295.');sample=makeSample(n,seed,num('mu'),num('sd'));update()};
 $('file').onchange=async()=>{let token=++fileToken;rows=[];$('col').replaceChildren();update();try{let f=$('file').files[0];if(!f)return;if(f.size>5e6)throw Error('Choose a CSV under 5 MB.');let parsed=parseCSV(await f.text());if(token!==fileToken)return;rows=parsed;rows[0]?.forEach((v,i)=>$('col').add(new Option(v||'Column '+(i+1),i)));update()}catch(e){clearError(e.message)}};
+function setModel(m,s){$('mu').value=m;$('sd').value=s;$('mr').value=m;$('sr').value=s;sample=null}
+$('lowerPreset').onclick=()=>{setModel(50,10);$('inverseSide').value='left';$('inverseP').value=.1;update()};
+$('upperPreset').onclick=()=>{setModel(50,10);$('inverseSide').value='right';$('inverseP').value=.05;update()};
+$('salaryPreset').onclick=()=>{$('solveX1').value=60000;$('solveP1').value=.69;$('solveX2').value=80000;$('solveP2').value=.83;update()};
+$('zExample').onclick=()=>{$('zDirection').value='z-to-p';$('zInput').value=1.23;$('zQuestion').value='left';update()};
+$('zSalaryExample').onclick=()=>{$('zDirection').value='p-to-z';$('zProbability').value=.69;$('pQuestion').value='left';update()};
+$('zUpperExample').onclick=()=>{$('zDirection').value='p-to-z';$('zProbability').value=.05;$('pQuestion').value='right';update()};
 function save(url,name){let a=document.createElement('a');a.href=url;a.download=name;a.click()}function blob(text,type,name){let u=URL.createObjectURL(new Blob([text],{type}));save(u,name);setTimeout(()=>URL.revokeObjectURL(u),2000)}
-$('png').onclick=()=>save($('plot').toDataURL(),'normal-distribution.png');$('json').onclick=()=>blob(JSON.stringify(meta,null,2),'application/json','normal-summary.json');$('csv').onclick=()=>blob('value\n'+sample.join('\n'),'text/csv','normal-sample.csv');$('reset').onclick=()=>location.reload();show(0);
-</script></html>
+$('png').onclick=()=>save($('plot').toDataURL(),'normal-distribution.png');$('json').onclick=()=>blob(JSON.stringify(meta,null,2),'application/json','normal-summary.json');$('csv').onclick=()=>{if(sample)blob('value\n'+sample.join('\n'),'text/csv','normal-sample.csv')};$('reset').onclick=()=>location.reload();buildZTable();show(0);
+</script>
+</body>
+</html>
